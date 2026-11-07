@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Noise Recorder Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: #f5f5f7; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1 { font-size: 24px; margin-bottom: 8px; }
+        .header-bar { display: flex; gap: 16px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+        input[type="text"] { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; min-width: 200px; }
+        select, button { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background: white; cursor: pointer; }
+        button { background: #007AFF; color: white; border: none; }
+        button:hover { background: #0056b3; }
+        button.delete-btn { background: #ff3b30; padding: 4px 10px; }
+        button.delete-btn:hover { background: #c7281f; }
+        .panel { background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+        .panel h2 { font-size: 18px; margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .event-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+        .event-row:last-child { border-bottom: none; }
+        .event-info { flex: 1; display: flex; align-items: center; gap: 8px; }
+        .event-time { color: #666; font-size: 14px; }
+        .event-data { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+        .level-badge { background: #eee; padding: 2px 8px; border-radius: 4px; min-width: 50px; text-align: center; }
+        .level-badge.danger { background: #ffcccc; color: #cc0000; font-weight: bold; }
+        .level-badge.warning { background: #fff3cd; color: #856404; }
+        .note { color: #666; font-style: italic; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        audio { width: 100%; margin-top: 8px; height: 40px; }
+        .chart-container { position: relative; height: 300px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f9f9f9; font-weight: 600; }
+        tr:hover { background: #f5f5f7; }
+        .no-data { color: #999; text-align: center; padding: 20px; }
+        .bulk-bar { display: flex; align-items: center; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .bulk-bar label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        .bulk-bar button:disabled { background: #ccc; cursor: default; }
+        input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Noise Recorder Dashboard</h1>
+        
+        <div class="header-bar">
+            <input type="text" id="searchDate" placeholder="Filter by date (e.g., 2026-11-07)">
+            <select id="dateSelect" onchange="applyFilters()"></select>
+            <button onclick="loadEvents()">Load Events</button>
+            <button onclick="chartRefresh()" style="background:#34c759;">📊 Chart</button>
+            <button onclick="viewDaily()">📅 Daily</button>
+        </div>
+
+        <!-- Main dashboard -->
+        <div id="dashboard" style="display:none;">
+            
+            <!-- Chart Panel -->
+            <div class="panel">
+                <h2>Noise Levels (Past 24 Hours)</h2>
+                <div class="chart-container">
+                    <canvas id="noiseChart"></canvas>
+                </div>
+                <div id="minData" style="margin-top:10px;"></div>
+            </div>
+
+            <!-- Events List -->
+            <div class="panel">
+                <h2>Recent Disturbances</h2>
+                <div class="bulk-bar" id="bulkBar">
+                    <label><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)"> Select all</label>
+                    <button class="delete-btn" id="deleteSelectedBtn" onclick="deleteSelected()" disabled>Delete selected (0)</button>
+                </div>
+                <div id="eventsList"></div>
+            </div>
+
+            <!-- Daily Summary -->
+            <div class="panel">
+                <h2>Daily Summary</h2>
+                <div id="dailySummary"></div>
+            </div>
+
+        </div>
+
+        <div id="noData" style="display:block; color: #999;">
+            No events found. Make sure the recorder has captured some disturbances.
+        </div>
+    </div>
+
+    <script>
+        // Data loaded from Python template - these are JSON objects already
+        const events = {{{events_json}}};
+        const minutes = {{{minutes_json}}};
+        const dailyData = {{{daily_data}}};
+        var noiseChart = null;
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, function(c) {
+                return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+            });
+        }
+        
+        function applyFilters() {
+            const dateFilter = document.getElementById("searchDate").value;
+            if (dateFilter) {
+                const start = new Date(dateFilter + "T00:00:00");
+                const end = new Date(dateFilter + "T23:59:59");
+                const now = new Date();
+                if (now >= start && now <= end) {
+                    loadEventsAndChart();
+                } else {
+                    loadEventsAndChart();
+                }
+            } else {
+                loadEventsAndChart();
+            }
+        }
+
+        function loadEvents() { loadEventsAndChart(); }
+        function chartRefresh() { renderChart(); }
+
+        function loadEventsAndChart() {
+            renderEvents();
+            renderChart();
+        }
+
+        function renderEvents() {
+            const list = document.getElementById("eventsList");
+            if (events.length === 0) {
+                list.innerHTML = '<div class="no-data">No disturbances recorded.</div>';
+                document.getElementById("bulkBar").style.display = "none";
+                return;
+            }
+
+            let html = '';
+            events.forEach(function(e) {
+                var maxLz = (e.max_lz == null) ? 0 : e.max_lz;
+                var levelClass = (maxLz < 40) ? 'warning' : 'danger';
+                
+                var time = new Date(e.start).toLocaleTimeString();
+                var duration = Math.round(e.duration_s || 0);
+                var note = escapeHtml(e.note || '');
+                
+                html += '<div class="event-row">' +
+                    '<div class="event-info">' +
+                    '<input type="checkbox" class="event-select" value="' + e.id + '" onchange="updateSelection()">' +
+                    '<span class="event-time">' + time + '</span>' +
+                    '<span class="note">' + note + '</span>' +
+                    '</div>' +
+                    '<div class="event-data">' +
+                    '<span class="level-badge ' + levelClass + '">' + maxLz.toFixed(1) + ' dB</span>' +
+                    '<span>' + duration + 's</span>' +
+                    '<button class="delete-btn" onclick="deleteEvent(' + e.id + ')">Delete</button>' +
+                    '</div>' +
+                    '</div>' + (e.file ? '<audio id="audio-' + e.id + '" controls preload="none" data-id="' + e.id + '" src="/play/' + encodeURI(e.file.replace(/\\\\/g, '/')) + '"></audio>' : '');
+            });
+            list.innerHTML = html;
+
+            // Attach click handlers for playback
+            document.querySelectorAll('audio').forEach(function(audio) {
+                audio.style.display = 'none';
+                var btn = document.createElement('button');
+                btn.className = 'play-btn';
+                btn.id = 'play-' + audio.dataset.id;
+                btn.textContent = '▶ Play';
+                btn.onclick = function() { playAudio(audio.dataset.id); };
+                var ref = audio.parentElement;
+                ref.insertBefore(btn, audio);
+            });
+        }
+
+        function deleteEvent(id) {
+            if (!confirm("Delete this disturbance and its recording? This can't be undone.")) return;
+            fetch('/events/' + id, { method: 'DELETE' }).then(function(r) {
+                if (r.ok) location.reload();
+                else r.json().then(function(d) { console.log("Delete failed:", d.detail); });
+            });
+        }
+
+        function selectedIds() {
+            return Array.from(document.querySelectorAll('.event-select:checked')).map(function(cb) {
+                return Number(cb.value);
+            });
+        }
+
+        function toggleSelectAll(checked) {
+            document.querySelectorAll('.event-select').forEach(function(cb) { cb.checked = checked; });
+            updateSelection();
+        }
+
+        function updateSelection() {
+            var all = document.querySelectorAll('.event-select');
+            var n = selectedIds().length;
+            var selectAll = document.getElementById("selectAll");
+            selectAll.checked = all.length > 0 && n === all.length;
+            selectAll.indeterminate = n > 0 && n < all.length;
+            var btn = document.getElementById("deleteSelectedBtn");
+            btn.disabled = n === 0;
+            btn.textContent = 'Delete selected (' + n + ')';
+        }
+
+        function deleteSelected() {
+            var ids = selectedIds();
+            if (ids.length === 0) return;
+            if (!confirm("Delete " + ids.length + " disturbance(s) and their recordings? This can't be undone.")) return;
+            fetch('/events/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: ids })
+            }).then(function(r) {
+                if (r.ok) location.reload();
+                else r.json().then(function(d) { console.log("Bulk delete failed:", d.detail); });
+            });
+        }
+
+        function playAudio(id) {
+            document.querySelectorAll('audio').forEach(function(a) {
+                if (a.dataset.id === String(id)) {
+                    a.style.display = 'block';
+                    a.play();
+                } else {
+                    a.pause();
+                    a.style.display = 'none';
+                }
+            });
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById("noiseChart").getContext("2d");
+            
+            // Server sends minutes for the most recent recorded day only
+            var labels = minutes.map(function(m) { return m.time_bucket.slice(11, 16); });
+            var maxLzData = minutes.map(function(m) { return m.max_lz; });
+
+            if (maxLzData.length === 0) {
+                document.querySelector(".chart-container").innerHTML = '<div class="no-data">No minute-level data available.</div>';
+                return;
+            }
+            if (typeof Chart === "undefined") return;
+            if (noiseChart) noiseChart.destroy();
+
+            try {
+                noiseChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Max Level (dB)',
+                            data: maxLzData,
+                            borderColor: '#007AFF',
+                            backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        scales: {
+                            y: { beginAtZero: false, title: { display: true, text: 'Level (dB)' } },
+                            x: { ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 10 } }
+                        }
+                    }
+                });
+            } catch(e) {
+                console.log("Chart init error:", e);
+            }
+        }
+
+        function viewDaily() {
+            renderDaily();
+        }
+
+        function renderDaily() {
+            var summaryDiv = document.getElementById("dailySummary");
+            if (dailyData.length === 0) {
+                summaryDiv.innerHTML = '<div class="no-data">No daily data available.</div>';
+                return;
+            }
+
+            var html = '<table><thead><tr><th>Date</th><th>Events</th><th>Loudest (dB)</th><th>Total Minutes</th></tr></thead><tbody>';
+            dailyData.forEach(function(row) {
+                var day = row.day;
+                var count = row.count;
+                var loudest = row.loudest;
+                var total_min = row.total_min;
+                if (day === null) day = '';
+                html += '<tr><td>' + day + '</td><td>' + count + '</td><td>' + loudest + ' dB</td><td>' + total_min + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            summaryDiv.innerHTML = html;
+        }
+
+        // --- Chart.js from CDN (loaded dynamically) ---
+        async function initChartLib() {
+            var script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+            script.onload = function() {
+                if (document.getElementById("noiseChart")) renderChart();
+            };
+            document.head.appendChild(script);
+        }
+
+        // --- Build date dropdown ---
+        var dateSelect = document.getElementById("dateSelect");
+        var now = new Date();
+        var year = now.getFullYear();
+        var options = year + 1;
+        for (var y = year; y < options; y++) {
+            for (var mo = 1; mo <= 12; mo++) {
+                var dateStr = y + "-" + String(mo).padStart(2, '0');
+                var monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                var monthAbbr = monthNames[mo-1];
+                
+                var opt = document.createElement("option");
+                opt.value = dateStr;
+                opt.textContent = dateStr + " " + monthAbbr;
+                
+                if (dateStr.startsWith(now.toISOString().split("T")[0]) && mo === now.getMonth() + 1) {
+                    opt.selected = true;
+                }
+                dateSelect.appendChild(opt);
+            }
+        }
+
+        // Set current month as selected
+        var currDate = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,'0');
+        if (dateSelect) {
+            dateSelect.value = currDate;
+        }
+        
+        // Show the dashboard and render everything on load
+        if (events.length) {
+            document.getElementById("dashboard").style.display = "block";
+            document.getElementById("noData").style.display = "none";
+        }
+        renderEvents();
+        renderDaily();
+        initChartLib();
+
+    </script>
+</body>
+</html>
