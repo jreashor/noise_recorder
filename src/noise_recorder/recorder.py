@@ -6,63 +6,41 @@ All-day noise recorder for macOS with dB readings and a SQLite database.
   a WAV clip (with pre-roll) and adds a row to the `events` table.
 - Every minute it also logs the average/max level to the `minutes` table, so
   you can show the quiet baseline as well as the disturbances.
-- Query/sort the data with noise_report.py, DB Browser for SQLite, or Datasette.
+- Query/sort the data with noise-report, DB Browser for SQLite, or Datasette.
 
-Setup:
+Setup (see README):
     brew install portaudio
-    pip3 install sounddevice numpy
-    python3 noise_recorder.py --list-devices
+    pip install -e .
+    noise-recorder --list-devices
 
 Run all day (caffeinate stops the Mac sleeping; keep it plugged in):
-    caffeinate -i python3 noise_recorder.py --device 2 --cal-offset 0
+    caffeinate -i noise-recorder --device 2 --cal-offset 0
 
 CALIBRATION: levels are dBFS + --cal-offset. Offset 0 = relative dBFS.
 For dB SPL run `--calibrate` against a reference sound level meter, then pass
 the printed offset. Fix the macOS input volume and never change it.
 """
+
 import argparse
 import collections
 import datetime as dt
-import sqlite3
 import sys
 import time
 import wave
-from pathlib import Path
 
 import numpy as np
-import sounddevice as sd
+
+from . import config, db
 
 BLOCK_SEC = 0.1
 HIGHPASS_HZ = 20.0
-
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    start TEXT NOT NULL,          -- local time, ISO 8601
-    duration_s REAL,
-    peak REAL,                    -- max instantaneous sample level
-    max_lz REAL,                  -- loudest 0.1 s block, unweighted
-    max_la REAL,                  -- loudest 0.1 s block, A-weighted
-    laeq REAL,                    -- energy average over the event, A-weighted
-    lzeq REAL,                    -- energy average over the event, unweighted
-    baseline_lz REAL,             -- room level just before the event
-    unit TEXT,                    -- 'dB SPL' or 'dBFS'
-    file TEXT,                    -- WAV filename
-    note TEXT                     -- free text for you (e.g. 'dragging', 'thud')
-);
-CREATE INDEX IF NOT EXISTS idx_events_start ON events(start);
-CREATE INDEX IF NOT EXISTS idx_events_maxlz ON events(max_lz);
-CREATE TABLE IF NOT EXISTS minutes (
-    minute TEXT PRIMARY KEY,
-    laeq REAL, lzeq REAL, max_lz REAL
-);
-"""
 
 
 def a_weight_db(f):
     f2 = np.maximum(f, 1e-3) ** 2
     ra = (12194.0**2 * f2**2) / (
-        (f2 + 20.6**2) * np.sqrt((f2 + 107.7**2) * (f2 + 737.9**2)) * (f2 + 12194.0**2))
+        (f2 + 20.6**2) * np.sqrt((f2 + 107.7**2) * (f2 + 737.9**2)) * (f2 + 12194.0**2)
+    )
     return 20 * np.log10(ra) + 2.0
 
 
@@ -132,8 +110,13 @@ class Detector:
         if self.minute and self.m_lz:
             self.db.execute(
                 "INSERT OR REPLACE INTO minutes VALUES (?,?,?,?)",
-                (self.minute, round(energy_mean(self.m_la), 1),
-                 round(energy_mean(self.m_lz), 1), round(max(self.m_lz), 1)))
+                (
+                    self.minute,
+                    round(energy_mean(self.m_la), 1),
+                    round(energy_mean(self.m_lz), 1),
+                    round(max(self.m_lz), 1),
+                ),
+            )
             self.db.commit()
         self.m_lz, self.m_la = [], []
 
@@ -146,11 +129,19 @@ class Detector:
         self.db.execute(
             "INSERT INTO events (start,duration_s,peak,max_lz,max_la,laeq,lzeq,"
             "baseline_lz,unit,file) VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (self.start.isoformat(timespec="seconds"),
-             round(len(self.clip) * BLOCK_SEC, 1), round(max(self.pk), 1),
-             round(max(self.lz), 1), round(max(self.la), 1),
-             round(energy_mean(self.la), 1), round(energy_mean(self.lz), 1),
-             round(self.clip_base, 1), self.unit, name))
+            (
+                self.start.isoformat(timespec="seconds"),
+                round(len(self.clip) * BLOCK_SEC, 1),
+                round(max(self.pk), 1),
+                round(max(self.lz), 1),
+                round(max(self.la), 1),
+                round(energy_mean(self.la), 1),
+                round(energy_mean(self.lz), 1),
+                round(self.clip_base, 1),
+                self.unit,
+                name,
+            ),
+        )
         self.db.commit()
         print(f"  saved {name}: max LZ {max(self.lz):.1f}, max LA {max(self.la):.1f} {self.unit}")
         self.rec = False
@@ -165,7 +156,7 @@ class Detector:
 
         if self.baseline is None:
             self.baseline = lz
-        if self.n < 100:                       # ~10 s calibration window
+        if self.n < 100:  # ~10 s calibration window
             self.baseline = 0.9 * self.baseline + 0.1 * lz
             self.pre.append(data)
             return
@@ -178,13 +169,17 @@ class Detector:
                 self.clip = list(self.pre)
                 self.lz, self.la, self.pk = [lz], [la], [pk]
                 self.quiet = 0
-                print(f"[{now:%H:%M:%S}] disturbance {lz:.1f} {self.unit} "
-                      f"(baseline {self.baseline:.1f})")
+                print(
+                    f"[{now:%H:%M:%S}] disturbance {lz:.1f} {self.unit} "
+                    f"(baseline {self.baseline:.1f})"
+                )
             else:
                 self.baseline = 0.995 * self.baseline + 0.005 * lz
         else:
             self.clip.append(data)
-            self.lz.append(lz); self.la.append(la); self.pk.append(pk)
+            self.lz.append(lz)
+            self.la.append(la)
+            self.pk.append(pk)
             self.quiet = 0 if loud else self.quiet + 1
             if self.quiet >= self.tail_blocks or len(self.clip) >= self.max_blocks:
                 self._save_event()
@@ -196,10 +191,13 @@ class Detector:
 
 
 def run_calibration(args, meter):
+    import sounddevice as sd
+
     print("Play a steady sound; note the reference meter reading. Measuring 10 s...")
     vals = []
-    with sd.InputStream(samplerate=args.rate, channels=1, blocksize=meter.n,
-                        device=args.device) as s:
+    with sd.InputStream(
+        samplerate=args.rate, channels=1, blocksize=meter.n, device=args.device
+    ) as s:
         for _ in range(100):
             data, _ = s.read(meter.n)
             vals.append(meter.levels(data[:, 0])[1])
@@ -208,22 +206,38 @@ def run_calibration(args, meter):
     print(f"Measured {measured:.1f} dBFS(A). Use: --cal-offset {ref - measured:.1f}")
 
 
-def main():
+def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("--list-devices", action="store_true")
     p.add_argument("--device", type=int)
     p.add_argument("--calibrate", action="store_true")
     p.add_argument("--cal-offset", type=float, default=0.0)
-    p.add_argument("--rate", type=int, default=44100,
-                   help="sample rate; 22050 halves disk use and is fine for thumps")
-    p.add_argument("--threshold", type=float, default=10.0,
-                   help="dB above baseline that counts as a disturbance")
+    p.add_argument(
+        "--rate",
+        type=int,
+        default=44100,
+        help="sample rate; 22050 halves disk use and is fine for thumps",
+    )
+    p.add_argument(
+        "--threshold",
+        type=float,
+        default=10.0,
+        help="dB above baseline that counts as a disturbance",
+    )
     p.add_argument("--min-level", type=float, default=None)
     p.add_argument("--preroll", type=float, default=5.0)
     p.add_argument("--tail", type=float, default=5.0)
     p.add_argument("--max-clip", type=float, default=300.0)
-    p.add_argument("--out", default="noise_recordings")
-    args = p.parse_args()
+    p.add_argument(
+        "--data-dir",
+        "--out",
+        dest="data_dir",
+        help=f"where WAVs and noise.db go (default: $NOISE_DATA_DIR or {config.DEFAULT_DATA_DIR})",
+    )
+    args = p.parse_args(argv)
+
+    # Imported here so the rest of the module (and its tests) works without PortAudio.
+    import sounddevice as sd
 
     if args.list_devices:
         print(sd.query_devices())
@@ -234,19 +248,18 @@ def main():
         run_calibration(args, meter)
         return
 
-    out = Path(args.out)
-    out.mkdir(exist_ok=True)
-    db = sqlite3.connect(out / "noise.db")
-    db.execute("PRAGMA journal_mode=WAL")
-    db.executescript(SCHEMA)
+    out = config.data_dir(args.data_dir)
+    conn = db.create(config.db_path(out))
+    print(f"Saving to {out}")
 
     # Keep running through glitches (mic unplugged, sleep/wake): retry after 5 s.
     while True:
-        det = Detector(args, meter, db, out)
+        det = Detector(args, meter, conn, out)
         print("Listening... Ctrl+C to stop. Calibrating baseline ~10 s, stay quiet.")
         try:
-            with sd.InputStream(samplerate=args.rate, channels=1, blocksize=block,
-                                device=args.device) as stream:
+            with sd.InputStream(
+                samplerate=args.rate, channels=1, blocksize=block, device=args.device
+            ) as stream:
                 while True:
                     data, overflow = stream.read(block)
                     if overflow:

@@ -1,141 +1,128 @@
 # Noise Recorder
 
-An all-day ambient noise recorder for macOS that captures sound disturbances and logs them to a SQLite database.
+An all-day ambient noise recorder for macOS that captures sound disturbances and logs them to a SQLite database, with a CLI report tool and a web dashboard for review.
 
-## Overview
-
-- **`noise_recorder.py`**: Core recording program that listens continuously, detects loud events above the room baseline, records WAV clips with pre-roll context (~5s), and logs metrics to SQLite.
-- **`noise_report.py`**: Query tool for inspecting recorded events, generating summaries (hourly/daily), and exporting data.
+| Command | What it does |
+|---|---|
+| `noise-recorder` | Listens continuously, detects loud events above the room baseline, saves WAV clips with ~5 s pre-roll, and logs levels to SQLite |
+| `noise-report` | CLI for top events, hourly/daily summaries, notes, deleting and CSV export |
+| `noise-dashboard` | Web UI: chart of levels, event list with playback, delete button, daily summary |
 
 ## Setup
 
-1. Create and activate virtual environment, then install Python packages:
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install sounddevice numpy fastapi uvicorn
-   ```
-2. Calibrate (optional, for dB SPL instead of relative dBFS):
-   ```bash
-   # Play a steady sound and note the reading on a reference meter
-   python3 noise_recorder.py --calibrate
-   ```
-3. Run all day:
-   ```bash
-   caffeinate -i python3 noise_recorder.py --device 2 --cal-offset 0
-   ```
+Requires macOS, Python 3.11+ and PortAudio.
 
-## Dashboard (Review Recorded Data)
-
-Start the web dashboard to view disturbances interactively:
 ```bash
-python3 dashboard.py
-# Then open http://localhost:8000 in your browser
+brew install portaudio
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"      # installs the three commands above (+ test tools)
 ```
 
-The dashboard provides:
-- 📊 Interactive chart of noise levels over time
-- 🔍 List of recorded events with timestamps and dB levels
-- ▶️ Play back WAV recordings directly in the browser
-- 📅 Daily/hourly summaries
-- 🔎 Filter events by date
-- 🗑️ Delete disturbances (row + WAV clip)
+In a new terminal, only `source .venv/bin/activate` is needed.
 
-## Usage: Recording
+## Where data is stored
+
+Recordings and the database live in **`~/NoiseRecordings`**, outside the code folder:
+
+```
+~/NoiseRecordings/
+├── noise.db                 # SQLite database
+└── 2026-11-07/11-14-10.wav  # one folder per day
+```
+
+Change it with the `NOISE_DATA_DIR` environment variable or each command's `--data-dir` flag.
+
+## Recording
+
+```bash
+noise-recorder --list-devices                 # find your microphone's index
+caffeinate -i noise-recorder --device 0       # run all day (keep the Mac plugged in)
+```
+
+It calibrates to the room baseline (~10 s, stay quiet), then records disturbances that exceed the threshold. It retries automatically on glitches (e.g. mic unplugged). Leave the terminal open; Ctrl+C stops it.
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--device N` | Input device index (see `--list-devices`) | auto |
-| `--cal-offset X` | Calibration offset for dB SPL conversion | 0.0 |
+| `--device N` | Input device index (see `--list-devices`) | system default |
+| `--cal-offset X` | Calibration offset for dB SPL conversion | 0.0 (dBFS) |
 | `--rate S` | Sample rate (22050 saves disk space) | 44100 |
 | `--threshold T` | dB above baseline that triggers recording | 10.0 |
-| `--min-level L` | Absolute floor below which noise is ignored | -∞ |
-| `--preroll P` | Pre-roll seconds (captured before event) | 5.0 |
-| `--tail T` | Seconds of tail after event start | 5.0 |
+| `--min-level L` | Absolute floor below which noise is ignored | none |
+| `--preroll P` | Seconds captured before the event | 5.0 |
+| `--tail T` | Quiet seconds that end an event | 5.0 |
 | `--max-clip M` | Max clip duration in seconds | 300.0 |
-| `--out D` | Output directory for WAV files | `noise_recordings` |
+| `--data-dir D` | Where WAVs and `noise.db` go | `~/NoiseRecordings` |
 
-Run with:
+**Calibration (optional, for dB SPL instead of relative dBFS):** play a steady sound, run `noise-recorder --calibrate`, enter the reading from a reference sound level meter, and pass the printed `--cal-offset`. Keep the macOS input volume fixed afterwards.
+
+## Dashboard
+
 ```bash
-caffeinate -i python3 noise_recorder.py --device 2
+noise-dashboard              # then open http://127.0.0.1:8000
+noise-dashboard --port 8001  # if 8000 is in use
 ```
 
-Leave it running all day (keep Mac plugged in). It will:
-- Calibrate to room baseline (~10s)
-- Record disturbances that exceed the threshold
-- Retries automatically on glitches (e.g., mic unplugged)
+Shows a chart of per-minute levels for the latest recorded day, the event list with ▶ Play and Delete buttons, and a daily summary. Ctrl+C stops it.
 
-## Usage: Reporting
+If it says *address already in use*, another copy is running. Find and stop it:
 
-### Top N Loudest Events
 ```bash
-python3 noise_report.py top --n 20                  # by max LZ (unweighted)
-python3 noise_report.py top --n 10 --by la          # by A-weighted level
-python3 noise_report.py top --n 5 --since 2026-11-01
+pgrep -fl noise-dashboard
+pkill -f noise-dashboard
 ```
 
-### Hourly Summary
+## Reporting
+
 ```bash
-python3 noise_report.py hourly
-# Output: hour | events | loudest | avg_max
+noise-report top --n 20                   # loudest by max LZ (unweighted)
+noise-report top --n 10 --by la           # by A-weighted level
+noise-report top --since 2026-11-01
+noise-report hourly                       # hour | events | loudest | avg_max
+noise-report daily                        # date | events | loudest | total_min
+noise-report note 42 "dragging furniture" # annotate event 42
+noise-report delete 42 43                 # delete rows and their WAV clips
+noise-report delete 42 --keep-file        # delete the row, keep the WAV
+noise-report export events.csv            # CSV for Excel / Numbers
 ```
 
-### Daily Summary
-```bash
-python3 noise_report.py daily
-# Output: date | events | loudest | total_min
-```
+Deleting can't be undone.
 
-### Add Notes to Events
-```bash
-python3 noise_report.py note 42 "dragging furniture"
-# Updates the 'note' field for event ID 42
-```
+## Database schema
 
-### Remove Events
-```bash
-python3 noise_report.py delete 42 43               # deletes rows and their WAV clips
-python3 noise_report.py delete 42 --keep-file      # deletes the row, keeps the WAV
-```
-You can also click **Delete** next to an event in the dashboard.
+**`events`**: one row per disturbance
 
-### Export Data
-```bash
-python3 noise_report.py export events.csv
-# Writes CSV suitable for Excel / Numbers
-```
-
-## Database Schema
-
-**Table: `events`**
 | Column | Description |
 |--------|-------------|
 | `id` | Auto-incrementing row ID |
-| `start` | ISO 8601 timestamp of event start |
-| `duration_s` | Event duration in seconds |
-| `peak` | Max instantaneous sample level (dBFS/SPL) |
-| `max_lz` | Loudest 0.1s block, unweighted |
-| `max_la` | Loudest 0.1s block, A-weighted |
-| `laeq` | Energy average over event, A-weighted |
-| `lzeq` | Energy average over event, unweighted |
-| `baseline_lz` | Room level before event |
-| `unit` | `'dB SPL'` or `'dBFS'` |
-| `file` | WAV filename |
-| `note` | Free text annotation |
+| `start` | ISO 8601 local timestamp of event start |
+| `duration_s` | Clip duration in seconds |
+| `peak` | Max instantaneous sample level |
+| `max_lz` / `max_la` | Loudest 0.1 s block, unweighted / A-weighted |
+| `lzeq` / `laeq` | Energy average over the event, unweighted / A-weighted |
+| `baseline_lz` | Room level just before the event |
+| `unit` | `dB SPL` or `dBFS` |
+| `file` | WAV path relative to the data directory |
+| `note` | Free-text annotation |
 
-**Table: `minutes`** (per-minute logging for baseline reference)
-| Column | Description |
-|--------|-------------|
-| `minute` | ISO 8601 date-time (YYYY-MM-DD HH:MM) |
-| `laeq` | Average A-weighted level |
-| `lzeq` | Average unweighted level |
-| `max_lz` | Max instantaneous level |
+**`minutes`**: per-minute levels (`minute`, `laeq`, `lzeq`, `max_lz`) for baseline reference.
 
-## Files
+## Development
 
-- `noise_recorder.py` – Main recording script
-- `noise_report.py` – CLI query and reporting tool
-- `dashboard.py` – Web dashboard for interactive review (runs FastAPI server)
-- `setup.sh` – One-liner setup script (creates venv + installs deps)
-- `requirements.txt` – Python dependencies
-- `noise_recordings/` – Output directory for WAV clips and SQLite database (`noise.db`)
+```bash
+pytest                  # run tests (no microphone needed)
+ruff check .            # lint
+ruff format .           # format
+```
+
+```
+├── pyproject.toml              # metadata, dependencies, commands, tool config
+├── src/noise_recorder/
+│   ├── config.py               # data directory / database location
+│   ├── db.py                   # schema and shared database helpers
+│   ├── recorder.py             # noise-recorder
+│   ├── report.py               # noise-report
+│   ├── dashboard.py            # noise-dashboard (FastAPI)
+│   └── templates/dashboard.html
+└── tests/
+```
