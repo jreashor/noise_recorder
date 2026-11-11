@@ -4,13 +4,37 @@ An all-day ambient noise recorder for macOS that captures sound disturbances and
 
 | Command | What it does |
 |---|---|
-| `noise-recorder` | Listens continuously, detects loud events above the room baseline, saves WAV clips with ~5 s pre-roll, and logs levels to SQLite |
+| `noise-recorder` | Listens continuously, detects loud events above the room baseline, saves WAV clips with ~2 s pre-roll, and logs levels to SQLite |
 | `noise-report` | CLI for top events, hourly/daily summaries, notes, deleting and CSV export |
 | `noise-dashboard` | Web UI: chart of levels, event list with playback, delete button, daily summary |
 
+## Quick start
+
+After [setup](#setup), use two terminal windows, one for each program. Run these from the project folder:
+
+**Terminal 1: recorder** (leave it running all day)
+```bash
+cd ~/Projects/noise_recorder
+source .venv/bin/activate
+caffeinate -i noise-recorder --device 0
+```
+Stay quiet for the first ~10 s while it measures the room. Each disturbance prints a `saved …` line.
+
+**Terminal 2: dashboard**
+```bash
+cd ~/Projects/noise_recorder
+source .venv/bin/activate
+noise-dashboard
+```
+Open <http://127.0.0.1:8000>, and refresh the page to see new events.
+
+**Stopping:** press Ctrl+C in each window. Closing a window also stops whatever is running in it.
+
+**Is it running?** `pgrep -fl noise-` lists both programs.
+
 ## Setup
 
-Requires macOS, Python 3.11+ and PortAudio.
+One-time, requires macOS, Python 3.11+ and PortAudio.
 
 ```bash
 brew install portaudio
@@ -40,19 +64,23 @@ noise-recorder --list-devices                 # find your microphone's index
 caffeinate -i noise-recorder --device 0       # run all day (keep the Mac plugged in)
 ```
 
-It calibrates to the room baseline (~10 s, stay quiet), then records disturbances that exceed the threshold. It retries automatically on glitches (e.g. mic unplugged). Leave the terminal open; Ctrl+C stops it.
+It calibrates to the room baseline (~10 s, stay quiet), then records disturbances that exceed the threshold and last at least the minimum length. It retries automatically on glitches (e.g. mic unplugged). Leave the terminal open; Ctrl+C stops it.
 
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--device N` | Input device index (see `--list-devices`) | system default |
 | `--cal-offset X` | Calibration offset for dB SPL conversion | 0.0 (dBFS) |
 | `--rate S` | Sample rate (22050 saves disk space) | 44100 |
-| `--threshold T` | dB above baseline that triggers recording | 10.0 |
+| `--threshold T` | dB above baseline that triggers recording | 30.0* |
+| `--min-duration S` | Seconds a disturbance must last to be saved; shorter ones are ignored | 2.0* |
 | `--min-level L` | Absolute floor below which noise is ignored | none |
-| `--preroll P` | Seconds captured before the event | 5.0 |
-| `--tail T` | Quiet seconds that end an event | 5.0 |
+| `--preroll P` | Seconds captured before the event | 2.0* |
+| `--tail T` | Quiet seconds that end an event; shorter pauses join into one clip. Only 1 s of that quiet is saved | 5.0* |
 | `--max-clip M` | Max clip duration in seconds | 300.0 |
+| `--gain G` | dB added to every saved WAV, the same for all clips (levels in the database are unaffected); `0` saves audio as captured | 6.0 |
 | `--data-dir D` | Where WAVs and `noise.db` go | `~/NoiseRecordings` |
+
+\* Defaults for these four come from the dashboard's **⚙ Settings** (saved in `~/NoiseRecordings/recorder_settings.json`); a flag on the command line overrides them.
 
 **Calibration (optional, for dB SPL instead of relative dBFS):** play a steady sound, run `noise-recorder --calibrate`, enter the reading from a reference sound level meter, and pass the printed `--cal-offset`. Keep the macOS input volume fixed afterwards.
 
@@ -61,9 +89,14 @@ It calibrates to the room baseline (~10 s, stay quiet), then records disturbance
 ```bash
 noise-dashboard              # then open http://127.0.0.1:8000
 noise-dashboard --port 8001  # if 8000 is in use
+noise-dashboard --recorder-args "--device 0"   # flags for the Start button
 ```
 
-Shows a chart of per-minute levels for the latest recorded day, the event list with ▶ Play and Delete buttons, and a daily summary. Ctrl+C stops it.
+**Start / stop recording from the dashboard:** the **Start recording** button runs `noise-recorder` in the background (under `caffeinate -i`, so the Mac stays awake) and **Stop recording** stops it like Ctrl+C, saving any event in progress. The status shows a recorder started from a terminal too, and only one can run at a time. Its output goes to `~/NoiseRecordings/recorder.log`, and the latest line appears under the toolbar. A recorder started from the dashboard keeps running if you close the dashboard; open it again to stop it. Pass recorder flags with `--recorder-args`.
+
+**⚙ Settings** adjusts sensitivity (dB above the room), the minimum length a disturbance must last to be saved, how long a pause can be and still join one clip, and how much audio before the sound is kept. Saving while recording restarts the recorder so the changes apply (it measures the room again for ~10 s). While recording, the line under the toolbar shows the live level, the room level, the trigger point and how long the current disturbance has lasted.
+
+Shows a chart of levels with each disturbance marked as a dot, the event list with ▶ Play and Delete buttons, and a daily summary. **Day** picks one recorded day (per-minute levels) or all days (loudest per hour), and **Min level** hides disturbances that rose less than that many dB above the room; the chart and list follow both. Click a dot to jump to its row. Each event shows how far it rose above the room's baseline (e.g. `+19.5 dB`). Absolute levels are in dBFS, which are always negative, unless you calibrate with `--cal-offset`. Ctrl+C stops it.
 
 If it says *address already in use*, another copy is running. Find and stop it:
 

@@ -18,26 +18,73 @@
         button.delete-btn:hover { background: #c7281f; }
         .panel { background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
         .panel h2 { font-size: 18px; margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 8px; }
-        .event-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
-        .event-row:last-child { border-bottom: none; }
-        .event-info { flex: 1; display: flex; align-items: center; gap: 8px; }
-        .event-time { color: #666; font-size: 14px; }
-        .event-data { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+        /* Disturbance list: header and rows share one grid so columns line up */
+        .ev-grid { display: grid; grid-template-columns: 28px 76px minmax(0, 1fr) 120px 64px 76px; align-items: center; column-gap: 12px; }
+        .ev-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 34px; margin-bottom: 4px; font-size: 14px; color: #666; }
+        .ev-head { padding: 6px 0; border-bottom: 1px solid #e5e5ea; font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.03em; }
+        .ev-head .num, .event-row .num { justify-self: end; text-align: right; }
+        button.sort-btn { background: none; color: #888; padding: 2px 0; font: inherit; text-transform: inherit; letter-spacing: inherit; border-radius: 0; justify-self: start; text-align: left; white-space: nowrap; }
+        button.sort-btn:hover { background: none; color: #333; }
+        button.sort-btn.active { color: #007AFF; }
+        .event { border-bottom: 1px solid #f0f0f0; }
+        .event:last-child { border-bottom: none; }
+        .event.playing { background: #f2f7ff; }
+        .event.flash { background: #fff8d6; }
+        .event-row { padding: 8px 0; font-size: 14px; }
+        .event-when { min-width: 0; }
+        .event-time { font-weight: 600; color: #333; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .event-date { color: #888; font-size: 12px; margin-left: 6px; }
+        .event-length { color: #555; font-variant-numeric: tabular-nums; }
+        button.play-btn { background: #eef4ff; color: #007AFF; padding: 4px 10px; font-size: 13px; width: 100%; }
+        button.play-btn:hover { background: #dce9ff; }
+        .event.playing button.play-btn { background: #007AFF; color: white; }
+        button.row-delete { background: none; color: #999; padding: 4px 8px; font-size: 13px; justify-self: end; }
+        button.row-delete:hover { background: #fff0ef; color: #c7281f; }
+        .event audio { display: none; width: 100%; height: 36px; margin: 0 0 10px; }
+        .event.playing audio { display: block; }
         .level-badge { background: #eee; padding: 2px 8px; border-radius: 4px; min-width: 50px; text-align: center; }
         .level-badge.danger { background: #ffcccc; color: #cc0000; font-weight: bold; }
         .level-badge.warning { background: #fff3cd; color: #856404; }
-        .note { color: #666; font-style: italic; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        audio { width: 100%; margin-top: 8px; height: 40px; }
+        .note { display: block; color: #666; font-style: italic; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .chart-container { position: relative; height: 300px; }
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
         th { background: #f9f9f9; font-weight: 600; }
         tr:hover { background: #f5f5f7; }
         .no-data { color: #999; text-align: center; padding: 20px; }
-        .bulk-bar { display: flex; align-items: center; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee; font-size: 14px; }
-        .bulk-bar label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-        .bulk-bar button:disabled { background: #ccc; cursor: default; }
         input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+        @media (max-width: 640px) {
+            .ev-grid { grid-template-columns: 24px 36px minmax(0, 1fr) auto auto 28px; column-gap: 8px; }
+            .ev-head { font-size: 11px; letter-spacing: 0; }
+            .event-date { display: block; margin-left: 0; }
+            button.play-btn .label, button.row-delete .label { display: none; }
+            button.row-delete { padding: 4px 6px; }
+        }
+        .filter { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #555; }
+        .filter span { font-weight: normal; color: #888; }
+        .filter input[type="number"] { width: 72px; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+        .chart-note { color: #888; font-size: 13px; margin: -4px 0 8px; }
+        .recorder-ctl { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .rec-status { display: flex; align-items: center; gap: 6px; font-weight: 600; color: #666; }
+        .rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #aaa; }
+        .rec-status.on { color: #c7281f; }
+        .rec-status.on .rec-dot { background: #ff3b30; animation: rec-pulse 1.5s infinite; }
+        @keyframes rec-pulse { 50% { opacity: 0.3; } }
+        button.rec-btn.on { background: #ff3b30; }
+        button.rec-btn.on:hover { background: #c7281f; }
+        button.rec-btn:disabled { background: #ccc; cursor: default; }
+        .rec-log { color: #888; font-size: 12px; font-family: ui-monospace, Menlo, monospace; margin: -8px 0 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+        button.settings-btn { background: #eee; color: #333; }
+        button.settings-btn:hover { background: #ddd; }
+        .settings-panel { display: none; }
+        .settings-panel.open { display: block; }
+        .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+        .settings-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 600; }
+        .settings-grid input { padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; width: 100%; }
+        .settings-grid .hint { font-weight: normal; color: #888; font-size: 12px; }
+        .settings-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; font-size: 14px; }
+        .settings-actions .msg { color: #666; }
+        .settings-actions .msg.error { color: #c7281f; }
     </style>
 </head>
 <body>
@@ -45,11 +92,47 @@
         <h1>Noise Recorder Dashboard</h1>
         
         <div class="header-bar">
-            <input type="text" id="searchDate" placeholder="Filter by date (e.g., 2026-11-07)">
-            <select id="dateSelect" onchange="applyFilters()"></select>
-            <button onclick="loadEvents()">Load Events</button>
-            <button onclick="chartRefresh()" style="background:#34c759;">📊 Chart</button>
-            <button onclick="viewDaily()">📅 Daily</button>
+            <label class="filter">Day
+                <select id="daySelect" onchange="changeDay(this.value)"></select>
+            </label>
+            <label class="filter">Min level
+                <input type="number" id="minLevel" step="1" min="0" placeholder="any" oninput="changeMinLevel(this.value)">
+                <span id="minLevelUnit">dB above room</span>
+            </label>
+            <div class="recorder-ctl">
+                <span class="rec-status" id="recStatus"><span class="rec-dot"></span><span id="recStatusText">Checking recorder…</span></span>
+                <button class="rec-btn" id="recBtn" onclick="toggleRecorder()" disabled>Start recording</button>
+                <button class="settings-btn" onclick="toggleSettings()">⚙ Settings</button>
+            </div>
+        </div>
+        <div class="rec-log" id="recLog"></div>
+
+        <!-- Recorder settings -->
+        <div class="panel settings-panel" id="settingsPanel">
+            <h2>Recording settings</h2>
+            <div class="settings-grid">
+                <label>Sensitivity: dB above room
+                    <input type="number" id="set-threshold" step="1">
+                    <span class="hint">Lower = more sensitive. A sound must rise this far above the room's normal level.</span>
+                </label>
+                <label>Minimum length (s)
+                    <input type="number" id="set-min_duration" step="0.5">
+                    <span class="hint">Disturbances shorter than this aren't saved. 0 saves everything.</span>
+                </label>
+                <label>Join gaps up to (s)
+                    <input type="number" id="set-tail" step="0.5">
+                    <span class="hint">Pauses shorter than this keep one clip going instead of starting a new one. Only 1 s of quiet is kept at the end.</span>
+                </label>
+                <label>Audio before (s)
+                    <input type="number" id="set-preroll" step="0.5">
+                    <span class="hint">How much audio from before the sound each clip includes.</span>
+                </label>
+            </div>
+            <div class="settings-actions">
+                <button onclick="saveSettings()" id="saveSettingsBtn">Save</button>
+                <button class="settings-btn" onclick="resetSettings()">Reset to defaults</button>
+                <span class="msg" id="settingsMsg"></span>
+            </div>
         </div>
 
         <!-- Main dashboard -->
@@ -57,19 +140,29 @@
             
             <!-- Chart Panel -->
             <div class="panel">
-                <h2>Noise Levels (Past 24 Hours)</h2>
+                <h2 id="chartTitle">Noise Levels</h2>
+                <div class="chart-note" id="chartNote"></div>
                 <div class="chart-container">
                     <canvas id="noiseChart"></canvas>
                 </div>
-                <div id="minData" style="margin-top:10px;"></div>
             </div>
 
             <!-- Events List -->
             <div class="panel">
                 <h2>Recent Disturbances</h2>
-                <div class="bulk-bar" id="bulkBar">
-                    <label><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)"> Select all</label>
-                    <button class="delete-btn" id="deleteSelectedBtn" onclick="deleteSelected()" disabled>Delete selected (0)</button>
+                <div id="bulkBar">
+                    <div class="ev-toolbar">
+                        <span id="selectionSummary"></span>
+                        <button class="delete-btn" id="deleteSelectedBtn" onclick="deleteSelected()" style="display:none">Delete selected</button>
+                    </div>
+                    <div class="ev-grid ev-head">
+                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)" title="Select all" aria-label="Select all">
+                        <span></span>
+                        <button class="sort-btn" data-key="time" onclick="sortEvents('time')">Time</button>
+                        <button class="sort-btn num" data-key="db" onclick="sortEvents('db')" title="How far above the room's level">Level</button>
+                        <button class="sort-btn num" data-key="secs" onclick="sortEvents('secs')">Length</button>
+                        <span></span>
+                    </div>
                 </div>
                 <div id="eventsList"></div>
             </div>
@@ -88,11 +181,16 @@
     </div>
 
     <script>
-        // Data loaded from Python template - these are JSON objects already
-        const events = {{{events_json}}};
-        const minutes = {{{minutes_json}}};
-        const dailyData = {{{daily_data}}};
+        // Data loaded from Python template - these are JSON objects already.
+        // Replaced by refreshData() when the recorder saves something new.
+        var events = {{{events_json}}};
+        var minutes = {{{minutes_json}}};
+        var dailyData = {{{daily_data}}};
+        var days = {{{days_json}}};
         var noiseChart = null;
+
+        // dBFS unless the recorder was run with --cal-offset (then dB SPL).
+        var levelUnit = (events.length && events[0].unit) || 'dBFS';
 
         function escapeHtml(s) {
             return String(s).replace(/[&<>"']/g, function(c) {
@@ -100,72 +198,147 @@
             });
         }
         
-        function applyFilters() {
-            const dateFilter = document.getElementById("searchDate").value;
-            if (dateFilter) {
-                const start = new Date(dateFilter + "T00:00:00");
-                const end = new Date(dateFilter + "T23:59:59");
-                const now = new Date();
-                if (now >= start && now <= end) {
-                    loadEventsAndChart();
-                } else {
-                    loadEventsAndChart();
-                }
-            } else {
-                loadEventsAndChart();
-            }
+        // Uncalibrated levels are dBFS (always negative), so rate events by how far
+        // they rose above the room's baseline rather than by the absolute number.
+        function levelOver(e) {
+            return (e.baseline_lz == null || e.max_lz == null) ? null : e.max_lz - e.baseline_lz;
         }
 
-        function loadEvents() { loadEventsAndChart(); }
-        function chartRefresh() { renderChart(); }
+        // --- Sorting (choice remembered per browser) ---
+        var SORT_KEYS = {
+            time: function(e) { return e.start || ''; },
+            db:   function(e) { var o = levelOver(e); return o != null ? o : (e.max_lz || 0); },
+            secs: function(e) { return e.duration_s || 0; }
+        };
+        var sortState = { key: 'time', desc: true };
+        try {
+            var saved = JSON.parse(localStorage.getItem('eventSort'));
+            if (saved && SORT_KEYS[saved.key]) sortState = saved;
+        } catch (err) {}
 
-        function loadEventsAndChart() {
-            renderEvents();
+        function sortEvents(key) {
+            // Same button flips direction; a new one starts newest / loudest / longest first.
+            sortState = { key: key, desc: sortState.key === key ? !sortState.desc : true };
+            try { localStorage.setItem('eventSort', JSON.stringify(sortState)); } catch (err) {}
+            rerenderEvents();
+        }
+
+        function applySort() {
+            var get = SORT_KEYS[sortState.key];
+            var dir = sortState.desc ? -1 : 1;
+            events.sort(function(a, b) {
+                var x = get(a), y = get(b);
+                if (x < y) return -dir;
+                if (x > y) return dir;
+                return (a.start < b.start) ? 1 : -1;   // ties: newest first
+            });
+            document.querySelectorAll('.sort-btn').forEach(function(btn) {
+                var active = btn.dataset.key === sortState.key;
+                btn.classList.toggle('active', active);
+                btn.textContent = btn.textContent.replace(/ [▲▼]$/, '') + (active ? (sortState.desc ? ' ▼' : ' ▲') : '');
+            });
+        }
+
+        // --- Filters: one day (or all) and a minimum level. The list and chart both follow them. ---
+        var selectedDay = days.length ? days[0] : 'all';
+        var minLevel = null;
+        try {
+            var savedMin = localStorage.getItem('minLevel');
+            if (savedMin !== null && savedMin !== '' && !isNaN(Number(savedMin))) minLevel = Number(savedMin);
+        } catch (err) {}
+
+        function renderDayOptions() {
+            // Keep following the newest day as new ones appear.
+            var select = document.getElementById("daySelect");
+            var html = '';
+            days.forEach(function(d) {
+                html += '<option value="' + d + '">' + dayLabel(d) + '</option>';
+            });
+            select.innerHTML = html + '<option value="all">All days</option>';
+            select.value = selectedDay;
+        }
+
+        function changeDay(day) {
+            selectedDay = day;
+            rerenderEvents();
+            refreshData();   // the chart's levels for that day come from the server
+        }
+
+        function changeMinLevel(v) {
+            minLevel = (v === '' || isNaN(Number(v))) ? null : Number(v);
+            try { localStorage.setItem('minLevel', minLevel == null ? '' : String(minLevel)); } catch (err) {}
+            rerenderEvents();
             renderChart();
+        }
+
+        // The number shown in the Level column: dB above the room, or the raw level if unknown.
+        function levelValue(e) { return SORT_KEYS.db(e); }
+
+        function visibleEvents() {
+            return events.filter(function(e) {
+                if (selectedDay !== 'all' && (e.start || '').slice(0, 10) !== selectedDay) return false;
+                return minLevel == null || levelValue(e) >= minLevel;
+            });
+        }
+
+        // Re-render the list, keeping checked boxes checked.
+        function rerenderEvents() {
+            var checked = selectedIds();
+            renderEvents();
+            document.querySelectorAll('.event-select').forEach(function(cb) {
+                cb.checked = checked.indexOf(Number(cb.value)) !== -1;
+            });
+            updateSelection();
         }
 
         function renderEvents() {
             const list = document.getElementById("eventsList");
+            document.getElementById("bulkBar").style.display = events.length ? '' : 'none';
             if (events.length === 0) {
                 list.innerHTML = '<div class="no-data">No disturbances recorded.</div>';
-                document.getElementById("bulkBar").style.display = "none";
                 return;
             }
 
+            applySort();
+            var shown = visibleEvents();
+            if (shown.length === 0) {
+                list.innerHTML = '<div class="no-data">No disturbances match these filters.</div>';
+                return;
+            }
             let html = '';
-            events.forEach(function(e) {
+            shown.forEach(function(e) {
                 var maxLz = (e.max_lz == null) ? 0 : e.max_lz;
-                var levelClass = (maxLz < 40) ? 'warning' : 'danger';
+                var over = levelOver(e);
+                var levelClass = (over != null && over >= 20) ? 'danger' : 'warning';
+                var badge = (over != null) ? '+' + over.toFixed(1) + ' dB' : maxLz.toFixed(1) + ' ' + (e.unit || 'dB');
                 
-                var time = new Date(e.start).toLocaleTimeString();
+                var started = new Date(e.start);
+                var time = started.toLocaleTimeString();
+                var date = started.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
                 var duration = Math.round(e.duration_s || 0);
-                var note = escapeHtml(e.note || '');
-                
-                html += '<div class="event-row">' +
-                    '<div class="event-info">' +
-                    '<input type="checkbox" class="event-select" value="' + e.id + '" onchange="updateSelection()">' +
-                    '<span class="event-time">' + time + '</span>' +
-                    '<span class="note">' + note + '</span>' +
-                    '</div>' +
-                    '<div class="event-data">' +
-                    '<span class="level-badge ' + levelClass + '">' + maxLz.toFixed(1) + ' dB</span>' +
-                    '<span>' + duration + 's</span>' +
-                    '<button class="delete-btn" onclick="deleteEvent(' + e.id + ')">Delete</button>' +
-                    '</div>' +
-                    '</div>' + (e.file ? '<audio id="audio-' + e.id + '" controls preload="none" data-id="' + e.id + '" src="/play/' + encodeURI(e.file.replace(/\\\\/g, '/')) + '"></audio>' : '');
+                var note = e.note ? '<span class="note">' + escapeHtml(e.note) + '</span>' : '';
+                var play = e.file
+                    ? '<button class="play-btn" id="play-' + e.id + '" onclick="playAudio(' + e.id + ')" aria-label="Play">▶<span class="label"> Play</span></button>'
+                    : '<span></span>';
+
+                html += '<div class="event" id="event-' + e.id + '"><div class="ev-grid event-row">' +
+                    '<input type="checkbox" class="event-select" value="' + e.id + '" onchange="updateSelection()" aria-label="Select">' +
+                    play +
+                    '<div class="event-when"><span class="event-time">' + time + '</span><span class="event-date">' + date + '</span>' + note + '</div>' +
+                    '<span class="num"><span class="level-badge ' + levelClass + '" title="Peak ' + maxLz.toFixed(1) + ' ' + escapeHtml(e.unit || 'dB') + '">' + badge + '</span></span>' +
+                    '<span class="num event-length">' + duration + ' s</span>' +
+                    '<button class="row-delete" onclick="deleteEvent(' + e.id + ')" title="Delete this disturbance" aria-label="Delete">✕<span class="label"> Delete</span></button>' +
+                    '</div>' + (e.file ? '<audio id="audio-' + e.id + '" controls preload="none" data-id="' + e.id + '" src="/play/' + encodeURI(e.file.replace(/\\\\/g, '/')) + '"></audio>' : '') + '</div>';
             });
             list.innerHTML = html;
 
-            // Attach click handlers for playback
-            document.querySelectorAll('audio').forEach(function(audio) {
-                audio.style.display = 'none';
-                var btn = document.createElement('button');
-                btn.className = 'play-btn';
-                btn.id = 'play-' + audio.dataset.id;
-                btn.textContent = '▶ Play';
-                btn.onclick = function() { playAudio(audio.dataset.id); };
-                var ref = audio.parentElement;
-                ref.insertBefore(btn, audio);
+            // Keep the row's button and highlight in step with its player.
+            document.querySelectorAll('.event audio').forEach(function(audio) {
+                var row = document.getElementById('event-' + audio.dataset.id);
+                var btn = document.getElementById('play-' + audio.dataset.id);
+                audio.addEventListener('play', function() { btn.firstChild.textContent = '❚❚'; btn.lastChild.textContent = ' Pause'; });
+                audio.addEventListener('pause', function() { btn.firstChild.textContent = '▶'; btn.lastChild.textContent = ' Play'; });
+                audio.addEventListener('ended', function() { row.classList.remove('playing'); });
             });
         }
 
@@ -195,8 +368,11 @@
             selectAll.checked = all.length > 0 && n === all.length;
             selectAll.indeterminate = n > 0 && n < all.length;
             var btn = document.getElementById("deleteSelectedBtn");
-            btn.disabled = n === 0;
-            btn.textContent = 'Delete selected (' + n + ')';
+            btn.style.display = n ? '' : 'none';
+            btn.textContent = 'Delete ' + n + ' selected';
+            document.getElementById("selectionSummary").textContent = n
+                ? n + ' of ' + all.length + ' selected'
+                : all.length + ' disturbance' + (all.length === 1 ? '' : 's');
         }
 
         function deleteSelected() {
@@ -213,56 +389,348 @@
             });
         }
 
+        // --- Recorder start/stop and live status ---
+        var recRunning = false;
+        var recPid = null;
+        var lastSaved = null;  // recorder's saved-event count when the page last updated
+        var recTimer = null;
+
+        function fmtDb(v) { return (v == null) ? '–' : v.toFixed(1); }
+
+        function liveText(live) {
+            if (live.calibrating) {
+                return 'Measuring the room, stay quiet (' + live.calibration_left_s + ' s left). Sounds now are not recorded.';
+            }
+            var ignored = live.ignored ? ' · ' + live.ignored + ' too short to keep' : '';
+            if (live.in_event) {
+                var needs = (live.event_s < live.min_duration) ? ' (needs ' + live.min_duration + ' s to be kept)' : ', will be kept';
+                return '● Disturbance ' + live.event_s.toFixed(1) + ' s' + needs + ' · now ' + fmtDb(live.level) + ' ' + live.unit + ignored;
+            }
+            return 'Listening · now ' + fmtDb(live.level) + ' ' + live.unit +
+                ' · room ' + fmtDb(live.baseline) +
+                ' · saves sounds above ' + fmtDb(live.trigger) + ' (+' + live.threshold + ' dB) lasting ' +
+                live.min_duration + ' s+' + ignored;
+        }
+
+        function renderRecorder(s) {
+            recRunning = s.running;
+            document.getElementById("recStatus").className = 'rec-status' + (s.running ? ' on' : '');
+            document.getElementById("recStatusText").textContent = s.running ? 'Recording' : 'Stopped';
+            var btn = document.getElementById("recBtn");
+            btn.disabled = false;
+            btn.className = 'rec-btn' + (s.running ? ' on' : '');
+            btn.textContent = s.running ? 'Stop recording' : 'Start recording';
+
+            // The recorder saves its last event as it stops, so update then too.
+            if (wasRunning && !s.running) refreshData();
+            wasRunning = s.running;
+            if (s.pid !== recPid) { recPid = s.pid; lastSaved = null; }
+            var logEl = document.getElementById("recLog");
+            if (s.running && s.live) {
+                if (lastSaved != null && s.live.saved > lastSaved) refreshData();
+                lastSaved = s.live.saved;
+                logEl.textContent = liveText(s.live);
+            } else {
+                logEl.textContent = (s.log && s.log.length) ? s.log[s.log.length - 1] : '';
+            }
+        }
+
+        // --- Live data updates (no page reload) ---
+        var wasRunning = false;
+        var pendingData = null;  // data waiting for a playing clip to finish
+        var lastDataFetch = Date.now();
+
+        function audioPlaying() {
+            return Array.prototype.some.call(document.querySelectorAll('audio'), function(a) { return !a.paused && !a.ended; });
+        }
+
+        function refreshData() {
+            lastDataFetch = Date.now();
+            var day = selectedDay;
+            return fetch('/data?day=' + encodeURIComponent(day)).then(jsonOrError).then(function(d) {
+                if (day !== selectedDay) return;   // the day changed again while loading
+                // Viewing the newest day and a newer one started: move to it.
+                if (day !== 'all' && day === days[0] && d.days.length && d.days[0] !== day) {
+                    selectedDay = d.days[0];
+                    return refreshData();
+                }
+                pendingData = d;
+                applyPendingData();
+            }).catch(function(e) { console.log("Data refresh failed:", e.message); });
+        }
+
+        function applyPendingData() {
+            // Re-rendering the list would stop a clip mid-play; try again when it ends.
+            if (!pendingData || audioPlaying()) return;
+            var d = pendingData;
+            pendingData = null;
+            events = d.events;
+            minutes = d.minutes;
+            dailyData = d.daily;
+            days = d.days;
+            if (events.length && events[0].unit) levelUnit = events[0].unit;
+            showDashboardIfData();
+            renderDayOptions();
+            rerenderEvents();
+            renderDaily();
+            renderChart();
+        }
+
+        document.addEventListener('ended', applyPendingData, true);
+        document.addEventListener('pause', applyPendingData, true);
+
+        function showDashboardIfData() {
+            document.getElementById("dashboard").style.display = events.length ? "block" : "none";
+            document.getElementById("noData").style.display = events.length ? "none" : "block";
+        }
+
+        function scheduleRecorderRefresh() {
+            clearTimeout(recTimer);
+            recTimer = setTimeout(refreshRecorder, recRunning ? 1000 : 5000);
+        }
+
+        function refreshRecorder() {
+            // Per-minute chart data grows while recording even with no new disturbances.
+            if (recRunning && Date.now() - lastDataFetch > 60000) refreshData();
+            fetch('/recorder').then(function(r) { return r.json(); }).then(renderRecorder)
+                .catch(function() { document.getElementById("recStatusText").textContent = 'Dashboard offline'; })
+                .then(scheduleRecorderRefresh);
+        }
+
+        function toggleRecorder() {
+            var btn = document.getElementById("recBtn");
+            btn.disabled = true;
+            document.getElementById("recStatusText").textContent = recRunning ? 'Stopping…' : 'Starting…';
+            fetch('/recorder/' + (recRunning ? 'stop' : 'start'), {
+                method: 'POST',
+                headers: { 'X-Noise-Dashboard': '1' }
+            }).then(function(r) {
+                return r.json().then(function(d) {
+                    if (r.ok) renderRecorder(d);
+                    else document.getElementById("recLog").textContent = d.detail;
+                });
+            }).catch(function() {}).then(refreshRecorder);
+        }
+
+        // --- Recorder settings ---
+        var SETTING_KEYS = ['threshold', 'min_duration', 'tail', 'preroll'];
+        var settingDefaults = null;
+
+        function showSettings(d) {
+            settingDefaults = d.defaults;
+            SETTING_KEYS.forEach(function(k) {
+                var input = document.getElementById('set-' + k);
+                input.value = d.settings[k];
+                input.min = d.limits[k][0];
+                input.max = d.limits[k][1];
+            });
+        }
+
+        function settingsMsg(text, isError) {
+            var el = document.getElementById("settingsMsg");
+            el.textContent = text;
+            el.className = 'msg' + (isError ? ' error' : '');
+        }
+
+        // Parse a JSON response, turning HTTP errors into readable messages.
+        function jsonOrError(r) {
+            return r.json().catch(function() { return {}; }).then(function(d) {
+                if (r.ok) return d;
+                if (r.status === 404) throw new Error('The dashboard server is out of date. Stop noise-dashboard and start it again, then reload this page.');
+                throw new Error(typeof d.detail === 'string' ? d.detail : 'Request failed (' + r.status + ')');
+            });
+        }
+
+        function loadSettings() {
+            return fetch('/recorder/settings').then(jsonOrError).then(function(d) { showSettings(d); return d; });
+        }
+
+        function toggleSettings() {
+            var panel = document.getElementById("settingsPanel");
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                settingsMsg('', false);
+                loadSettings().catch(function(e) { settingsMsg(e.message, true); });
+            }
+        }
+
+        function resetSettings() {
+            var ready = settingDefaults ? Promise.resolve() : loadSettings();
+            ready.then(function() {
+                SETTING_KEYS.forEach(function(k) { document.getElementById('set-' + k).value = settingDefaults[k]; });
+                settingsMsg('Defaults filled in. Press Save to use them.', false);
+            }).catch(function(e) { settingsMsg(e.message, true); });
+        }
+
+        function recorderPost(action) {
+            return fetch('/recorder/' + action, { method: 'POST', headers: { 'X-Noise-Dashboard': '1' } })
+                .then(jsonOrError);
+        }
+
+        function saveSettings() {
+            var values = {};
+            for (var i = 0; i < SETTING_KEYS.length; i++) {
+                var v = document.getElementById('set-' + SETTING_KEYS[i]).value;
+                if (v === '' || isNaN(Number(v))) { settingsMsg('Please fill in every setting with a number.', true); return; }
+                values[SETTING_KEYS[i]] = Number(v);
+            }
+            var btn = document.getElementById("saveSettingsBtn");
+            btn.disabled = true;
+            fetch('/recorder/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Noise-Dashboard': '1' },
+                body: JSON.stringify(values)
+            }).then(jsonOrError).then(function(d) {
+                showSettings(d);
+                if (!recRunning) { settingsMsg('Saved. Used the next time recording starts.', false); return; }
+                // Settings are read at startup, so restart a running recorder to apply them.
+                settingsMsg('Saved. Restarting the recorder to apply them…', false);
+                return recorderPost('stop').then(function() { return recorderPost('start'); })
+                    .then(function(s) { renderRecorder(s); settingsMsg('Saved and applied. The recorder restarted and is measuring the room again.', false); });
+            }).catch(function(e) { settingsMsg(e.message, true); refreshRecorder(); })
+              .then(function() { btn.disabled = false; });
+        }
+
         function playAudio(id) {
-            document.querySelectorAll('audio').forEach(function(a) {
+            // The row's button toggles play/pause; starting one clip closes the others.
+            document.querySelectorAll('.event audio').forEach(function(a) {
+                var row = document.getElementById('event-' + a.dataset.id);
                 if (a.dataset.id === String(id)) {
-                    a.style.display = 'block';
-                    a.play();
+                    row.classList.add('playing');
+                    if (a.paused) {
+                        // play() rejects if paused again before it starts; that's expected.
+                        var started = a.play();
+                        if (started) started.catch(function() {});
+                    } else {
+                        a.pause();
+                    }
                 } else {
                     a.pause();
-                    a.style.display = 'none';
+                    row.classList.remove('playing');
                 }
             });
         }
 
-        function renderChart() {
-            const ctx = document.getElementById("noiseChart").getContext("2d");
-            
-            // Server sends minutes for the most recent recorded day only
-            var labels = minutes.map(function(m) { return m.time_bucket.slice(11, 16); });
-            var maxLzData = minutes.map(function(m) { return m.max_lz; });
+        // "2026-11-08 21:53" (minutes), "2026-11-08 21:00" (hours) or "2026-11-08T21:53:22"
+        // (events) are all local times; return milliseconds so they share one time axis.
+        function localMs(s) { return new Date(s.replace(' ', 'T')).getTime(); }
 
-            if (maxLzData.length === 0) {
-                document.querySelector(".chart-container").innerHTML = '<div class="no-data">No minute-level data available.</div>';
+        function dayLabel(day) {
+            return new Date(day + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+        }
+
+        function renderChart() {
+            var container = document.querySelector(".chart-container");
+            if (!document.getElementById("noiseChart")) container.innerHTML = '<canvas id="noiseChart"></canvas>';
+            var hourly = selectedDay === 'all';
+            var shown = visibleEvents();
+            document.getElementById("chartTitle").textContent = 'Noise Levels (' + (hourly ? 'All Days' : dayLabel(selectedDay)) + ')';
+            document.getElementById("chartNote").textContent = 'Line: loudest level each ' + (hourly ? 'hour' : 'minute') +
+                '. Dots: the ' + shown.length + ' disturbance' + (shown.length === 1 ? '' : 's') + ' listed below. Gaps: not recording.';
+
+            // A real time axis, so dots sit at their time and gaps in recording stay gaps.
+            var step = hourly ? 3600000 : 60000;
+            var line = [], prev = null;
+            minutes.forEach(function(m) {
+                var x = localMs(m.time_bucket);
+                if (prev != null && x - prev > step) line.push({ x: prev + step, y: null });
+                line.push({ x: x, y: m.max_lz });
+                prev = x;
+            });
+            var dots = shown.map(function(e) { return { x: localMs(e.start), y: e.max_lz, e: e }; });
+
+            if (line.length === 0 && dots.length === 0) {
+                if (noiseChart) { noiseChart.destroy(); noiseChart = null; }
+                container.innerHTML = '<div class="no-data">No levels recorded for this day.</div>';
                 return;
             }
             if (typeof Chart === "undefined") return;
             if (noiseChart) noiseChart.destroy();
 
+            var xs = line.concat(dots).map(function(p) { return p.x; });
+            var xMin = Math.min.apply(null, xs), xMax = Math.max.apply(null, xs);
+            var HOUR = 3600000;
+            var tickHours = [1, 2, 3, 6, 12, 24, 48, 168].filter(function(h) { return (xMax - xMin) / (h * HOUR) <= 12; })[0] || 168;
+            var multiDay = new Date(xMin).toDateString() !== new Date(xMax).toDateString();
+
+            function fmtTime(ms, withSeconds) {
+                var d = new Date(ms);
+                var t = d.toLocaleTimeString([], withSeconds ? { hour: '2-digit', minute: '2-digit', second: '2-digit' } : { hour: '2-digit', minute: '2-digit' });
+                return multiDay ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + t : t;
+            }
+
             try {
-                noiseChart = new Chart(ctx, {
+                noiseChart = new Chart(document.getElementById("noiseChart").getContext("2d"), {
                     type: 'line',
                     data: {
-                        labels: labels,
                         datasets: [{
-                            label: 'Max Level (dB)',
-                            data: maxLzData,
+                            label: (hourly ? 'Loudest each hour' : 'Loudest each minute') + ' (' + levelUnit + ')',
+                            data: line,
                             borderColor: '#007AFF',
                             backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                            tension: 0.3,
-                            fill: true
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            tension: 0.2,
+                            fill: 'start'
+                        }, {
+                            label: 'Disturbance',
+                            data: dots,
+                            showLine: false,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            backgroundColor: '#ff3b30',
+                            pointBackgroundColor: dots.map(function(p) { var o = levelOver(p.e); return (o != null && o >= 20) ? '#ff3b30' : '#ff9500'; }),
+                            pointBorderColor: '#fff'
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false
+                        animation: false,
+                        interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                        onClick: function(evt, items) {
+                            var hit = items.filter(function(i) { return i.datasetIndex === 1; })[0];
+                            if (hit) showEvent(dots[hit.index].e.id);
                         },
                         scales: {
-                            y: { beginAtZero: false, title: { display: true, text: 'Level (dB)' } },
-                            x: { ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 10 } }
+                            y: { beginAtZero: false, title: { display: true, text: 'Level (' + levelUnit + ')' } },
+                            x: {
+                                type: 'linear',
+                                min: xMin,
+                                max: xMax,
+                                // Ticks on whole local hours / midnights.
+                                afterBuildTicks: function(axis) {
+                                    var t = new Date(axis.min);
+                                    t.setMinutes(0, 0, 0);
+                                    if (tickHours >= 24) t.setHours(0); else t.setHours(Math.ceil(t.getHours() / tickHours) * tickHours);
+                                    var ticks = [];
+                                    for (; t.getTime() <= axis.max; t.setHours(t.getHours() + tickHours)) {
+                                        if (t.getTime() >= axis.min) ticks.push({ value: t.getTime() });
+                                    }
+                                    axis.ticks = ticks;
+                                },
+                                ticks: {
+                                    maxRotation: 0,
+                                    callback: function(v) {
+                                        return tickHours >= 24
+                                            ? new Date(v).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                                            : fmtTime(v);
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: function(items) { return items.length ? fmtTime(items[0].parsed.x, items[0].datasetIndex === 1) : ''; },
+                                    label: function(item) {
+                                        if (item.datasetIndex === 0) return 'Loudest: ' + fmtDb(item.parsed.y) + ' ' + levelUnit;
+                                        var e = dots[item.dataIndex].e, o = levelOver(e);
+                                        return 'Disturbance: ' + (o != null ? '+' + o.toFixed(1) + ' dB' : fmtDb(e.max_lz) + ' ' + levelUnit) +
+                                            ', ' + Math.round(e.duration_s || 0) + ' s' + (e.note ? ' (' + e.note + ')' : '');
+                                    }
+                                }
+                            }
                         }
                     }
                 });
@@ -271,8 +739,13 @@
             }
         }
 
-        function viewDaily() {
-            renderDaily();
+        // Clicking a dot on the chart scrolls to its row in the list.
+        function showEvent(id) {
+            var row = document.getElementById('event-' + id);
+            if (!row) return;
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            row.classList.add('flash');
+            setTimeout(function() { row.classList.remove('flash'); }, 1500);
         }
 
         function renderDaily() {
@@ -282,14 +755,14 @@
                 return;
             }
 
-            var html = '<table><thead><tr><th>Date</th><th>Events</th><th>Loudest (dB)</th><th>Total Minutes</th></tr></thead><tbody>';
+            var html = '<table><thead><tr><th>Date</th><th>Events</th><th>Loudest (' + levelUnit + ')</th><th>Total Minutes</th></tr></thead><tbody>';
             dailyData.forEach(function(row) {
                 var day = row.day;
                 var count = row.count;
                 var loudest = row.loudest;
                 var total_min = row.total_min;
                 if (day === null) day = '';
-                html += '<tr><td>' + day + '</td><td>' + count + '</td><td>' + loudest + ' dB</td><td>' + total_min + '</td></tr>';
+                html += '<tr><td>' + day + '</td><td>' + count + '</td><td>' + loudest + '</td><td>' + total_min + '</td></tr>';
             });
             html += '</tbody></table>';
             summaryDiv.innerHTML = html;
@@ -305,42 +778,14 @@
             document.head.appendChild(script);
         }
 
-        // --- Build date dropdown ---
-        var dateSelect = document.getElementById("dateSelect");
-        var now = new Date();
-        var year = now.getFullYear();
-        var options = year + 1;
-        for (var y = year; y < options; y++) {
-            for (var mo = 1; mo <= 12; mo++) {
-                var dateStr = y + "-" + String(mo).padStart(2, '0');
-                var monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-                var monthAbbr = monthNames[mo-1];
-                
-                var opt = document.createElement("option");
-                opt.value = dateStr;
-                opt.textContent = dateStr + " " + monthAbbr;
-                
-                if (dateStr.startsWith(now.toISOString().split("T")[0]) && mo === now.getMonth() + 1) {
-                    opt.selected = true;
-                }
-                dateSelect.appendChild(opt);
-            }
-        }
-
-        // Set current month as selected
-        var currDate = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,'0');
-        if (dateSelect) {
-            dateSelect.value = currDate;
-        }
-        
         // Show the dashboard and render everything on load
-        if (events.length) {
-            document.getElementById("dashboard").style.display = "block";
-            document.getElementById("noData").style.display = "none";
-        }
-        renderEvents();
+        document.getElementById("minLevel").value = minLevel == null ? '' : minLevel;
+        showDashboardIfData();
+        renderDayOptions();
+        rerenderEvents();
         renderDaily();
         initChartLib();
+        refreshRecorder();
 
     </script>
 </body>

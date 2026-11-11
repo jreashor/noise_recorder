@@ -46,17 +46,37 @@ def connect(path: Path, readonly: bool = False) -> sqlite3.Connection:
     return c
 
 
+def delete_events(
+    c: sqlite3.Connection, ids: list[int], data_dir: Path, keep_file: bool = False
+) -> list[int]:
+    """Delete event rows and (unless keep_file) their WAV clips. Returns the ids deleted."""
+    if not ids:
+        return []
+    placeholders = ",".join("?" * len(ids))
+    rows = c.execute(f"SELECT id, file FROM events WHERE id IN ({placeholders})", ids).fetchall()
+    c.execute(f"DELETE FROM events WHERE id IN ({placeholders})", ids)
+    c.commit()
+    if not keep_file:
+        for _, file in rows:
+            if file:
+                path = (data_dir / file).resolve()
+                if data_dir.resolve() in path.parents:
+                    path.unlink(missing_ok=True)
+    return [r[0] for r in rows]
+
+
+def prune_missing_files(c: sqlite3.Connection, data_dir: Path) -> list[int]:
+    """Delete event rows whose WAV file was removed from disk outside the tools."""
+    rows = c.execute("SELECT id, file FROM events WHERE file IS NOT NULL AND file != ''")
+    gone = [i for i, f in rows.fetchall() if not (data_dir / f).exists()]
+    if gone:
+        c.executemany("DELETE FROM events WHERE id = ?", [(i,) for i in gone])
+        c.commit()
+    return gone
+
+
 def delete_event(
     c: sqlite3.Connection, event_id: int, data_dir: Path, keep_file: bool = False
 ) -> bool:
-    """Delete an event row and (unless keep_file) its WAV clip. False if no such event."""
-    row = c.execute("SELECT file FROM events WHERE id = ?", (event_id,)).fetchone()
-    if row is None:
-        return False
-    c.execute("DELETE FROM events WHERE id = ?", (event_id,))
-    c.commit()
-    if row[0] and not keep_file:
-        path = (data_dir / row[0]).resolve()
-        if data_dir.resolve() in path.parents:
-            path.unlink(missing_ok=True)
-    return True
+    """Delete one event and its WAV clip. False if no such event."""
+    return bool(delete_events(c, [event_id], data_dir, keep_file))

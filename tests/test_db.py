@@ -51,3 +51,18 @@ def test_data_dir_precedence(monkeypatch, tmp_path):
     monkeypatch.setenv("NOISE_DATA_DIR", str(tmp_path))
     assert config.data_dir() == tmp_path
     assert config.data_dir(tmp_path / "x") == tmp_path / "x"
+
+
+def test_delete_events_bulk(data_dir):
+    c = db.connect(data_dir / "noise.db")
+    assert sorted(db.delete_events(c, [1, 2, 999], data_dir)) == [1, 2]
+    assert c.execute("SELECT COUNT(*) FROM events").fetchone()[0] == 0
+    assert not list((data_dir / "2026-11-07").iterdir())
+    assert db.delete_events(c, [], data_dir) == []
+
+
+def test_prune_missing_files(data_dir):
+    (data_dir / "2026-11-07/11-14-10.wav").unlink()
+    c = db.connect(data_dir / "noise.db")
+    assert db.prune_missing_files(c, data_dir) == [1]
+    assert [r[0] for r in c.execute("SELECT id FROM events")] == [2]
