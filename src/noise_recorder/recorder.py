@@ -294,7 +294,7 @@ def main(argv=None):
     p.add_argument(
         "--gain",
         type=float,
-        default=6.0,
+        default=12.0,
         help="dB added to every saved clip, the same for all; 0 saves audio as captured",
     )
     p.add_argument(
