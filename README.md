@@ -76,9 +76,9 @@ It calibrates to the room baseline (~10 s, stay quiet), then records disturbance
 | `--cal-offset X` | Calibration offset for dB SPL conversion | 0.0 (dBFS) |
 | `--rate S` | Sample rate (22050 saves disk space) | 44100 |
 | `--threshold T` | dB above baseline that triggers recording | 30.0* |
-| `--min-duration S` | Seconds a disturbance must last to be saved; shorter ones are ignored | 2.0* |
+| `--min-duration S` | Seconds a disturbance must last to be saved; shorter ones are ignored | 0.5* |
 | `--min-level L` | Absolute floor below which noise is ignored | none |
-| `--preroll P` | Seconds captured before the event | 2.0* |
+| `--preroll P` | Seconds captured before the event | 1.0* |
 | `--tail T` | Quiet seconds that end an event; shorter pauses join into one clip. Only 1 s of that quiet is saved | 5.0* |
 | `--max-clip M` | Max clip duration in seconds | 300.0 |
 | `--gain G` | dB added to every saved WAV, the same for all clips (levels in the database are unaffected); `0` saves audio as captured | 18.0 |
