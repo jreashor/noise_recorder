@@ -28,9 +28,13 @@ noise-dashboard
 ```
 Open <http://127.0.0.1:8000>, and refresh the page to see new events.
 
+**One terminal instead:** run `noise-dashboard --recorder-args "--device 0"` alone and press **Start recording** in the dashboard (see [Dashboard](#dashboard)).
+
 **Stopping:** press Ctrl+C in each window. Closing a window also stops whatever is running in it.
 
-**Is it running?** `pgrep -fl noise-` lists both programs.
+**Is it running?** `pgrep -fl noise` lists both programs (a recorder started from the dashboard shows as `python -m noise_recorder.recorder`).
+
+**"A recorder is already running for … (PID N)"** means a recorder is already running, usually one started from the dashboard. Press **Stop recording** in the dashboard, or run `kill -INT N` (same as Ctrl+C, so any event in progress is saved).
 
 ## Setup
 
@@ -92,7 +96,7 @@ noise-dashboard --port 8001  # if 8000 is in use
 noise-dashboard --recorder-args "--device 0"   # flags for the Start button
 ```
 
-**Start / stop recording from the dashboard:** the **Start recording** button runs `noise-recorder` in the background (under `caffeinate -i`, so the Mac stays awake) and **Stop recording** stops it like Ctrl+C, saving any event in progress. The status shows a recorder started from a terminal too, and only one can run at a time. Its output goes to `~/NoiseRecordings/recorder.log`, and the latest line appears under the toolbar. A recorder started from the dashboard keeps running if you close the dashboard; open it again to stop it. Pass recorder flags with `--recorder-args`.
+**Start / stop recording from the dashboard:** the **Start recording** button runs `noise-recorder` in the background (under `caffeinate -i`, so the Mac stays awake) and **Stop recording** stops it like Ctrl+C, saving any event in progress. The status shows a recorder started from a terminal too, and only one can run at a time. Its output goes to `~/NoiseRecordings/recorder.log`, and the latest line appears under the toolbar. A recorder started from the dashboard keeps running if you close the dashboard; open it again to stop it. Pass recorder flags with `--recorder-args`; without `--device` the Start button uses the system default microphone.
 
 **⚙ Settings** adjusts sensitivity (dB above the room), the minimum length a disturbance must last to be saved, how long a pause can be and still join one clip, and how much audio before the sound is kept. Saving while recording restarts the recorder so the changes apply (it measures the room again for ~10 s). While recording, the line under the toolbar shows the live level, the room level, the trigger point and how long the current disturbance has lasted.
 
