@@ -290,7 +290,7 @@ def main(argv=None):
     p.add_argument(
         "--tail", type=float, help="seconds of quiet that end a disturbance (shorter gaps join)"
     )
-    p.add_argument("--max-clip", type=float, default=300.0)
+    p.add_argument("--max-clip", type=float, default=900.0)
     p.add_argument(
         "--gain",
         type=float,

@@ -79,8 +79,8 @@ It calibrates to the room baseline (~10 s, stay quiet), then records disturbance
 | `--min-duration S` | Seconds a disturbance must last to be saved; shorter ones are ignored | 0* |
 | `--min-level L` | Absolute floor below which noise is ignored | none |
 | `--preroll P` | Seconds captured before the event | 1.0* |
-| `--tail T` | Quiet seconds that end an event; shorter pauses join into one clip. Only 1 s of that quiet is saved | 5.0* |
-| `--max-clip M` | Max clip duration in seconds | 300.0 |
+| `--tail T` | Quiet seconds that end an event; shorter pauses join into one clip. Only 1 s of that quiet is saved | 90.0* |
+| `--max-clip M` | Max clip duration in seconds | 900.0 |
 | `--gain G` | dB added to every saved WAV, the same for all clips (levels in the database are unaffected); `0` saves audio as captured | 18.0 |
 | `--data-dir D` | Where WAVs and `noise.db` go | `~/NoiseRecordings` |
 

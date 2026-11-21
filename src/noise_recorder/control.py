@@ -26,7 +26,7 @@ SETTINGS = {
     "threshold": (30.0, (1.0, 60.0)),  # dB above the room that counts as a disturbance
     "min_duration": (0.0, (0.0, 60.0)),  # shorter disturbances aren't saved (s)
     "preroll": (1.0, (0.0, 30.0)),  # audio kept from before the disturbance (s)
-    "tail": (5.0, (0.5, 120.0)),  # quiet that ends it; shorter gaps join one clip (s)
+    "tail": (90.0, (0.5, 120.0)),  # quiet that ends it; shorter gaps join one clip (s)
 }
 
 _children = []  # Popen objects for recorders we started, so they get reaped
