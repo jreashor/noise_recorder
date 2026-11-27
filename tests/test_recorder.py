@@ -1,4 +1,5 @@
 import argparse
+import contextlib
 import datetime as dt
 import wave
 
@@ -12,17 +13,17 @@ BLOCK = int(RATE * BLOCK_SEC)
 
 
 def make_args(**kw):
-    args = dict(
-        rate=RATE,
-        cal_offset=0.0,
-        threshold=10.0,
-        min_level=None,
-        preroll=1.0,
-        tail=1.0,
-        min_duration=0.0,
-        max_clip=300.0,
-        gain=0.0,
-    )
+    args = {
+        "rate": RATE,
+        "cal_offset": 0.0,
+        "threshold": 10.0,
+        "min_level": None,
+        "preroll": 1.0,
+        "tail": 1.0,
+        "min_duration": 0.0,
+        "max_clip": 300.0,
+        "gain": 0.0,
+    }
     args.update(kw)
     return argparse.Namespace(**args)
 
@@ -170,10 +171,8 @@ def test_recorder_flags_default_to_saved_settings(tmp_path, monkeypatch):
         (["--data-dir", str(tmp_path)], 30.0),
         (["--data-dir", str(tmp_path), "--threshold", "12"], 12.0),
     ]:
-        try:
+        with contextlib.suppress(SystemExit):
             recorder.main(argv)
-        except SystemExit:
-            pass
         assert seen["threshold"] == threshold
         assert seen["min_duration"] == 4.0
         assert seen["tail"] == control.default_settings()["tail"]

@@ -94,7 +94,7 @@ class Detector:
         self.floor = args.min_level if args.min_level is not None else -1e9
         self.pre = collections.deque(maxlen=int(args.preroll / BLOCK_SEC))
         self.tail_blocks = int(args.tail / BLOCK_SEC)
-        self.min_blocks = int(round(args.min_duration / BLOCK_SEC))
+        self.min_blocks = round(args.min_duration / BLOCK_SEC)
         self.max_blocks = int(args.max_clip / BLOCK_SEC)
         self.n = 0
         self.saved = 0  # events saved by this detector
@@ -372,7 +372,7 @@ def record(args, meter, conn, out, block):
             det.finish()
             print("\nStopped.")
             return
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             det.finish()
             saved += det.saved
             ignored += det.ignored
